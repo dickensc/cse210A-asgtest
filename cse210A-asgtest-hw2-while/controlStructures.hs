@@ -26,21 +26,26 @@ instance Show ControlStructure where
   show (SkipStructure)      = "skip "
 
 controlEval :: ControlStructure -> State ProgramState ()
-controlEval (AssignmentStructure s arithExp)     = insertStateVariable s (arithEval arithExp)
-controlEval (IfStructure b c1 c2) =
-  let evalualtedBool = boolEval b
-  in if evalualtedBool
-     then controlEval c1
-     else
-          controlEval c2
-controlEval (WhileStructure b c) =
-  let evalualtedBool = boolEval b
-  in if evalualtedBool
-     then do
-       controlEval c
-       controlEval ( WhileStructure b c )
-     else
-          controlEval SkipStructure
+controlEval (AssignmentStructure s arithExp)     = do
+  expr <- arithEval arithExp
+  insertStateVariable s expr
+  return ()
+controlEval (IfStructure b c1 c2) = do
+  evalualtedBool <- boolEval b
+  if evalualtedBool
+  then controlEval c1
+  else
+       controlEval c2
+  return ()
+controlEval (WhileStructure b c) = do
+  evaluatedBool <- boolEval b
+  if evaluatedBool
+  then do
+     controlEval c
+     controlEval ( WhileStructure b c )
+  else
+      controlEval SkipStructure
+  return ()
 controlEval (OrderStructure c1 c2) = do
   controlEval c1
   controlEval c2
@@ -50,8 +55,11 @@ controlEval SkipStructure = return ()
 -- Control Parser --
 parseAssignmentStructure :: ReadP ControlStructure
 parseAssignmentStructure = do
-  variableName <- parseVariableExpression
+  consumeWhiteSpace
+  variableName <- atLeastOneCharacter
+  consumeWhiteSpace
   string ":="
+  consumeWhiteSpace
   arithmeticExpression <- parseArith
   return (variableName `AssignmentStructure` arithmeticExpression)
 
@@ -70,20 +78,22 @@ parseIfStructure = do
   boolExpr <- parseBool
   consumeWhiteSpace
   string "then"
+  consumeWhiteSpace
   ifBlock <- parseControl
   consumeWhiteSpace
   string "else"
+  consumeWhiteSpace
   elseBlock <- parseControl
   return (IfStructure boolExpr ifBlock elseBlock)
 
 orderedStructure :: ReadP ControlStructure
-orderedStructure = parseAssignmentStructure +++ parseIfStructure +++ parseOrderedStructure
+orderedStructure = parseOrderedStructure
 
 ifStructure :: ReadP ControlStructure
 ifStructure = orderedStructure +++ parseIfStructure
 
 assignmentStructure :: ReadP ControlStructure
-assignmentStructure = orderedStructure +++ parseAssignmentStructure
+assignmentStructure = ifStructure +++ parseAssignmentStructure
 
 parseControl :: ReadP ControlStructure
-parseControl = orderedStructure
+parseControl = assignmentStructure

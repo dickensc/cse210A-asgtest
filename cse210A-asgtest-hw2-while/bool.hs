@@ -4,6 +4,7 @@ import           Arith
 import           General
 
 import           Control.Applicative
+import           Control.Monad.State
 import           System.Environment
 import           Text.ParserCombinators.ReadP
 
@@ -23,13 +24,27 @@ instance Show BooleanExpression where
   show (AndExpression b1 b2)      = "(" ++ show b1 ++ " ∧ " ++ show b2 ++ ")"
   show (OrExpression b1 b2)       = "(" ++ show b1 ++ " ∨ " ++ show b2 ++ ")"
 
-boolEval :: BooleanExpression -> Bool
-boolEval (BooleanLiteral b)         = b
-boolEval (NotExpression b)          = not (boolEval b)
-boolEval (EquivExpression e1 e2)    = (arithEval e1) == (arithEval e2)
-boolEval (LessThanExpression e1 e2) = (arithEval e1) < (arithEval e2)
-boolEval (AndExpression b1 b2)      = (boolEval b1) && (boolEval b2)
-boolEval (OrExpression b1 b2)       = (boolEval b1) || (boolEval b2)
+boolEval :: BooleanExpression -> State ProgramState Bool
+boolEval (BooleanLiteral b)         = state $ \pgState -> (b, pgState)
+boolEval (NotExpression b)          = do
+  b1 <- boolEval b
+  return (not b1)
+boolEval (EquivExpression e1 e2)    = do
+  s1 <- arithEval e1
+  s2 <- arithEval e2
+  return (s1 == s2)
+boolEval (LessThanExpression e1 e2) = do
+  s1 <- arithEval e1
+  s2 <- arithEval e2
+  return (s1 < s2)
+boolEval (AndExpression b1 b2)      = do
+  bool1 <- boolEval b1
+  bool2 <- boolEval b2
+  return (bool1 && bool2)
+boolEval (OrExpression b1 b2)       = do
+  bool1 <- boolEval b1
+  bool2 <- boolEval b2
+  return (bool1 || bool2)
 
 -- Boolean parser --
 

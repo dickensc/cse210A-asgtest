@@ -10,16 +10,13 @@ import           Text.ParserCombinators.ReadP
 
 -- State Operations --
 
-
 type ProgramState = Map.Map String Int
 
 insertStateVariable :: String -> Int -> State ProgramState ()
 insertStateVariable name value = state $ \pgState -> ((), Map.insert name value pgState)
 
 getStateValue :: String -> State ProgramState Int
-getStateValue name = do
-  stateNow <- Control.Monad.State.get
-  return $ stateNow Map.! name
+getStateValue name = state $ \pgState -> ((Map.findWithDefault 0 name pgState), pgState)
 
 brackets :: ReadP a -> ReadP a
 brackets p = do
@@ -74,10 +71,3 @@ character =
 
 atLeastOneCharacter :: ReadP [Char]
 atLeastOneCharacter = many1 character
-
-parseVariableExpression :: ReadP [Char]
-parseVariableExpression = do
-  consumeWhiteSpace
-  variableName <- atLeastOneCharacter
-  consumeWhiteSpace
-  return variableName
