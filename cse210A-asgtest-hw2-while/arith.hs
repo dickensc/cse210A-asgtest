@@ -8,16 +8,19 @@ import           Text.ParserCombinators.ReadP
 
 -- ASTs --
 data ArithExpression = IntExpression Int
+    | VarExpression String
     | SumExpression ArithExpression ArithExpression
     | MulExpression ArithExpression ArithExpression
     | ExpExpression ArithExpression ArithExpression
 
 instance Show ArithExpression where
   show (IntExpression n)     = show n
+  show (VarExpression n)     = show n
   show (SumExpression e1 e2) = "(" ++ show e1 ++ " + " ++ show e2 ++ ")"
   show (MulExpression e1 e2) = "(" ++ show e1 ++ " * " ++ show e2 ++ ")"
   show (ExpExpression e1 e2) = "(" ++ show e1 ++ " ^ " ++ show e2 ++ ")"
 
+-- Variables do not need to be declared. A reference to an unset variable returns 0. --
 arithEval :: ArithExpression -> Int
 arithEval (IntExpression n)     = n
 arithEval (SumExpression e1 e2) = (arithEval e1) + (arithEval e2)
@@ -38,6 +41,18 @@ parseIntExpression :: ReadP ArithExpression
 parseIntExpression = do
   parsedInteger <- integerExpression
   return (IntExpression (read parsedInteger :: Int))
+
+variableExpression :: ReadP [Char]
+variableExpression = do
+  consumeWhiteSpace
+  expression <- atLeastOneNumber
+  consumeWhiteSpace
+  return expression
+
+parseVariableExpression :: ReadP ArithExpression
+parseVariableExpression = do
+  parsedInteger <- integerExpression
+  return (VarExpression (read parsedInteger :: Int))
 
 parseSumExpression :: ReadP ArithExpression
 parseSumExpression = do
@@ -64,7 +79,7 @@ parseArith :: ReadP ArithExpression
 parseArith = sumArith
 
 expArith :: ReadP ArithExpression
-expArith = parseIntExpression +++ brackets parseArith +++ parseExpExpression
+expArith = parseVariableExpression ++ parseIntExpression +++ brackets parseArith +++ parseExpExpression
 
 mulArith :: ReadP ArithExpression
 mulArith = expArith +++ parseMulExpression
