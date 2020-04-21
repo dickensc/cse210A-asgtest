@@ -11,6 +11,7 @@ import           Text.ParserCombinators.ReadP
 data ArithExpression = IntExpression Int
     | VarExpression String
     | SumExpression ArithExpression ArithExpression
+    | SubtractionExpression ArithExpression ArithExpression
     | MulExpression ArithExpression ArithExpression
     | ExpExpression ArithExpression ArithExpression
 
@@ -18,6 +19,7 @@ instance Show ArithExpression where
   show (IntExpression n)     = show n
   show (VarExpression x)     = show x
   show (SumExpression e1 e2) = "(" ++ show e1 ++ " + " ++ show e2 ++ ")"
+  show (SubtractionExpression e1 e2) = "(" ++ show e1 ++ " - " ++ show e2 ++ ")"
   show (MulExpression e1 e2) = "(" ++ show e1 ++ " * " ++ show e2 ++ ")"
   show (ExpExpression e1 e2) = "(" ++ show e1 ++ " ^ " ++ show e2 ++ ")"
 
@@ -29,6 +31,10 @@ arithEval (SumExpression e1 e2) = do
   s1 <- arithEval e1
   s2 <- arithEval e2
   return (s1 + s2)
+arithEval (SubtractionExpression e1 e2) = do
+  s1 <- arithEval e1
+  s2 <- arithEval e2
+  return (s1 - s2)
 arithEval (MulExpression e1 e2) = do
   s1 <- arithEval e1
   s2 <- arithEval e2
@@ -69,8 +75,15 @@ parseSumExpression :: ReadP ArithExpression
 parseSumExpression = do
   expr <- mulArith +++ brackets parseArith
   char '+'
-  remainingExp <- sumArith
+  remainingExp <- parseArith
   return (expr `SumExpression` remainingExp)
+
+parseSubExpression :: ReadP ArithExpression
+parseSubExpression = do
+  expr <- mulArith +++ brackets parseArith
+  char '-'
+  remainingExp <- parseArith
+  return (expr `SubtractionExpression` remainingExp)
 
 parseMulExpression :: ReadP ArithExpression
 parseMulExpression = do
@@ -87,7 +100,7 @@ parseExpExpression = do
   return (expr `ExpExpression` remainingExp)
 
 parseArith :: ReadP ArithExpression
-parseArith = sumArith
+parseArith = sumArith +++ subArith
 
 expArith :: ReadP ArithExpression
 expArith = parseVariableExpression +++ parseIntExpression +++ brackets parseArith +++ parseExpExpression
@@ -97,3 +110,6 @@ mulArith = expArith +++ parseMulExpression
 
 sumArith :: ReadP ArithExpression
 sumArith = mulArith +++ parseSumExpression
+
+subArith :: ReadP ArithExpression
+subArith = mulArith +++ parseSubExpression
