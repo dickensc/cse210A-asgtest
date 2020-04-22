@@ -14,6 +14,8 @@ import           Text.ParserCombinators.ReadP
 -- ASTs --
 data ControlStructure = AssignmentStructure String ArithExpression
     | IfStructure BooleanExpression ControlStructure ControlStructure
+    | TernaryStructure String BooleanExpression ArithExpression
+                   ArithExpression
     | WhileStructure BooleanExpression ControlStructure
     | OrderStructure ControlStructure ControlStructure
     | SkipStructure
@@ -21,6 +23,7 @@ data ControlStructure = AssignmentStructure String ArithExpression
 instance Show ControlStructure where
   show (AssignmentStructure s n) = s ++ " := " ++ show n
   show (IfStructure b c1 c2)         = "if " ++ show b ++ " then " ++ show c1 ++ " else " ++ show c2
+  show (TernaryStructure s b a1 a2)         = s ++ " := " ++ show b ++ " ? " ++ show a1 ++ " : " ++ show a2
   show (WhileStructure b c)      = "while " ++ show b ++ " do " ++ show c
   show (OrderStructure c1 c2) = show c1 ++ "; " ++ show c2
   show (SkipStructure)      = "skip "
@@ -36,6 +39,14 @@ controlEval (IfStructure b c1 c2) = do
   then controlEval c1
   else
        controlEval c2
+  return ()
+controlEval (TernaryStructure s b a1 a2) = do
+  evaluatedBool <- boolEval b
+  evaluatedExp1 <- arithEval a1
+  evaluatedExp2 <- arithEval a2
+  if evaluatedBool
+  then insertStateVariable s evaluatedExp1
+  else insertStateVariable s evaluatedExp2
   return ()
 controlEval (WhileStructure b c) = do
   evaluatedBool <- boolEval b
@@ -84,6 +95,21 @@ parseIfStructure = do
   elseBlock <- parseSkipStructure +++ parseAssignmentStructure +++ parseIfStructure +++ parseWhileStructure +++ curly parseControl
   return (IfStructure boolExpr ifBlock elseBlock)
 
+parseTernaryStructure :: ReadP ControlStructure
+parseTernaryStructure = do
+  variableName <- atLeastOneCharacter
+  consumeWhiteSpaceMandatory
+  string ":="
+  consumeWhiteSpaceMandatory
+  boolExpr <- parseBool
+  string "?"
+  consumeWhiteSpaceMandatory
+  trueVal <- parseArith
+  string ":"
+  consumeWhiteSpaceMandatory
+  falseVal <- parseArith
+  return (TernaryStructure variableName boolExpr trueVal falseVal)
+
 parseWhileStructure :: ReadP ControlStructure
 parseWhileStructure = do
   string "while"
@@ -109,8 +135,11 @@ whileStructure = orderedStructure +++ parseWhileStructure
 ifStructure :: ReadP ControlStructure
 ifStructure = whileStructure +++ parseIfStructure
 
+ternaryStructure :: ReadP ControlStructure
+ternaryStructure = ifStructure +++ parseTernaryStructure
+
 assignmentStructure :: ReadP ControlStructure
-assignmentStructure = ifStructure +++ parseAssignmentStructure
+assignmentStructure = ternaryStructure +++ parseAssignmentStructure
 
 skipStructure :: ReadP ControlStructure
 skipStructure = assignmentStructure +++ parseSkipStructure
