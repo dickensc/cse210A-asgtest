@@ -51,9 +51,8 @@ boolEval (OrExpression b1 b2)       = do
 -- reads the integer expression --
 boolLiteral :: ReadP [Char]
 boolLiteral = do
-  consumeWhiteSpace
   literal <- string "true" <|> string "false" <|> string "TRUE" <|> string "FALSE"
-  consumeWhiteSpace
+  consumeWhiteSpaceOpt
   if literal == "true" || literal == "TRUE" then
     return "True"
   else
@@ -66,16 +65,16 @@ parseLiteralExpression = do
 
 parseNotExpression :: ReadP BooleanExpression
 parseNotExpression = do
-  consumeWhiteSpace
   char '¬'
-  consumeWhiteSpace
-  remainingExp <- orBool +++ brackets parseBool
+  consumeWhiteSpaceMandatory
+  remainingExp <- brackets parseBool +++ parseLiteralExpression
   return (NotExpression remainingExp)
 
 parseLessThanExpression :: ReadP BooleanExpression
 parseLessThanExpression = do
   expr1 <- parseArith
   char '<'
+  consumeWhiteSpaceMandatory
   expr2 <- parseArith
   return (expr1 `LessThanExpression` expr2)
 
@@ -83,21 +82,24 @@ parseEquivExpression :: ReadP BooleanExpression
 parseEquivExpression = do
   expr1 <- parseArith
   char '='
+  consumeWhiteSpaceMandatory
   expr2 <- parseArith
   return (expr1 `EquivExpression` expr2)
 
 parseOrExpression :: ReadP BooleanExpression
 parseOrExpression = do
-  expr <- parseAndExpression +++ brackets parseBool
+  expr <- andBool
   char '∨'
-  remainingExp <- orBool +++ brackets parseBool
+  consumeWhiteSpaceMandatory
+  remainingExp <- orBool
   return (expr `OrExpression` remainingExp)
 
 parseAndExpression :: ReadP BooleanExpression
 parseAndExpression = do
-  expr <- parseLiteralExpression +++ parseEquivExpression +++ parseLessThanExpression +++ brackets parseBool
+  expr <- parseLiteralExpression +++ parseNotExpression +++ parseEquivExpression +++ parseLessThanExpression +++ brackets parseBool
   char '∧'
-  remainingExp <- andBool +++ brackets parseBool
+  consumeWhiteSpaceMandatory
+  remainingExp <- andBool
   return (expr `AndExpression` remainingExp)
 
 parseBool :: ReadP BooleanExpression

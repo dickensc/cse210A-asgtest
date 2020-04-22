@@ -18,5 +18,5 @@ main = do
       expression = fst keptParsing
       evaluation = runState (controlEval expression) Map.empty
       finalState = snd evaluation
-      formattedFinalState = concat (intersperse ", " [x ++ " -> " ++ show val | (x,val) <- (Map.assocs finalState)])
+      formattedFinalState = concat (intersperse ", " [x ++ " → " ++ show val | (x,val) <- (Map.assocs finalState)])
   putStrLn ("{" ++ formattedFinalState ++ "}" )

@@ -55,45 +55,64 @@ controlEval SkipStructure = return ()
 -- Control Parser --
 parseAssignmentStructure :: ReadP ControlStructure
 parseAssignmentStructure = do
-  consumeWhiteSpace
   variableName <- atLeastOneCharacter
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   string ":="
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   arithmeticExpression <- parseArith
   return (variableName `AssignmentStructure` arithmeticExpression)
 
 parseOrderedStructure :: ReadP ControlStructure
 parseOrderedStructure = do
-  expr <- parseAssignmentStructure +++ parseIfStructure
+  expr <- parseAssignmentStructure +++ parseIfStructure +++ parseWhileStructure +++ parseSkipStructure
   char ';'
+  consumeWhiteSpaceMandatory
   remainingExp <- parseControl
   return (expr `OrderStructure` remainingExp)
 
 parseIfStructure :: ReadP ControlStructure
 parseIfStructure = do
-  consumeWhiteSpace
   string "if"
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   boolExpr <- parseBool
-  consumeWhiteSpace
   string "then"
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   ifBlock <- parseControl
-  consumeWhiteSpace
   string "else"
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   elseBlock <- parseControl
   return (IfStructure boolExpr ifBlock elseBlock)
+
+parseWhileStructure :: ReadP ControlStructure
+parseWhileStructure = do
+  string "while"
+  consumeWhiteSpaceMandatory
+  boolExpr <- parseBool
+  string "do"
+  consumeWhiteSpaceMandatory
+  doBlock <- parseControl
+  return (WhileStructure boolExpr doBlock)
+
+parseSkipStructure :: ReadP ControlStructure
+parseSkipStructure = do
+  string "skip"
+  consumeWhiteSpaceOpt
+  return (SkipStructure)
 
 orderedStructure :: ReadP ControlStructure
 orderedStructure = parseOrderedStructure
 
+whileStructure :: ReadP ControlStructure
+whileStructure = orderedStructure +++ parseWhileStructure
+
 ifStructure :: ReadP ControlStructure
-ifStructure = orderedStructure +++ parseIfStructure
+ifStructure = whileStructure +++ parseIfStructure
 
 assignmentStructure :: ReadP ControlStructure
 assignmentStructure = ifStructure +++ parseAssignmentStructure
 
+skipStructure :: ReadP ControlStructure
+skipStructure = assignmentStructure +++ parseSkipStructure
+
 parseControl :: ReadP ControlStructure
-parseControl = assignmentStructure
+parseControl = skipStructure

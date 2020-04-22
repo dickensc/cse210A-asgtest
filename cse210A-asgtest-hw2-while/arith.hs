@@ -49,9 +49,8 @@ arithEval (ExpExpression e1 e2) = do
 -- reads the integer expression --
 integerExpression :: ReadP [Char]
 integerExpression = do
-  consumeWhiteSpace
   expression <- atLeastOneNumber
-  consumeWhiteSpace
+  consumeWhiteSpaceOpt
   return expression
 
 parseIntExpression :: ReadP ArithExpression
@@ -61,9 +60,8 @@ parseIntExpression = do
 
 variableName :: ReadP [Char]
 variableName = do
-  consumeWhiteSpace
   name <- atLeastOneCharacter
-  consumeWhiteSpace
+  consumeWhiteSpaceOpt
   return name
 
 parseVariableExpression :: ReadP ArithExpression
@@ -73,34 +71,38 @@ parseVariableExpression = do
 
 parseSumExpression :: ReadP ArithExpression
 parseSumExpression = do
-  expr <- mulArith +++ brackets parseArith
+  expr <- mulArith
   char '+'
-  remainingExp <- parseArith
+  consumeWhiteSpaceMandatory
+  remainingExp <- subArith
   return (expr `SumExpression` remainingExp)
 
 parseSubExpression :: ReadP ArithExpression
 parseSubExpression = do
-  expr <- mulArith +++ brackets parseArith
+  expr <- mulArith
   char '-'
-  remainingExp <- parseArith
+  consumeWhiteSpaceMandatory
+  remainingExp <- subArith
   return (expr `SubtractionExpression` remainingExp)
 
 parseMulExpression :: ReadP ArithExpression
 parseMulExpression = do
-  expr <- expArith +++ brackets parseArith
+  expr <- expArith
   char '*'
-  remainingExp <- mulArith +++ brackets parseArith
+  consumeWhiteSpaceMandatory
+  remainingExp <- mulArith
   return (expr `MulExpression` remainingExp)
 
 parseExpExpression :: ReadP ArithExpression
 parseExpExpression = do
   expr <- parseVariableExpression +++ parseIntExpression +++ brackets parseArith
   char '^'
-  remainingExp <- expArith +++ brackets parseArith
+  consumeWhiteSpaceMandatory
+  remainingExp <- expArith
   return (expr `ExpExpression` remainingExp)
 
 parseArith :: ReadP ArithExpression
-parseArith = sumArith +++ subArith
+parseArith = subArith
 
 expArith :: ReadP ArithExpression
 expArith = parseVariableExpression +++ parseIntExpression +++ brackets parseArith +++ parseExpExpression
@@ -112,4 +114,4 @@ sumArith :: ReadP ArithExpression
 sumArith = mulArith +++ parseSumExpression
 
 subArith :: ReadP ArithExpression
-subArith = mulArith +++ parseSubExpression
+subArith = sumArith +++ parseSubExpression

@@ -20,13 +20,12 @@ getStateValue name = state $ \pgState -> ((Map.findWithDefault 0 name pgState), 
 
 brackets :: ReadP a -> ReadP a
 brackets p = do
-  consumeWhiteSpace
   char '('
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   r <- p
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   char ')'
-  consumeWhiteSpace
+  consumeWhiteSpaceMandatory
   return r
 
 -- A parser for whiteSpace --
@@ -38,9 +37,13 @@ whiteSpace :: ReadP Char
 whiteSpace =
   satisfy isWhiteSpace
 
-consumeWhiteSpace :: ReadP [Char]
-consumeWhiteSpace =
+consumeWhiteSpaceOpt :: ReadP [Char]
+consumeWhiteSpaceOpt =
   Text.ParserCombinators.ReadP.many whiteSpace
+
+consumeWhiteSpaceMandatory :: ReadP [Char]
+consumeWhiteSpaceMandatory =
+  Text.ParserCombinators.ReadP.many1 whiteSpace
 
 -- parsers for numerics --
 
