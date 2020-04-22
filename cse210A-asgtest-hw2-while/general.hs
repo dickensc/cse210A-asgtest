@@ -25,7 +25,18 @@ brackets p = do
   r <- p
   consumeWhiteSpaceMandatory
   char ')'
+  consumeWhiteSpaceOpt
+  return r
+
+
+curly :: ReadP a -> ReadP a
+curly p = do
+  char '{'
   consumeWhiteSpaceMandatory
+  r <- p
+  consumeWhiteSpaceMandatory
+  char '}'
+  consumeWhiteSpaceOpt
   return r
 
 -- A parser for whiteSpace --
