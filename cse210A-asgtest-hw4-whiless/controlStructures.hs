@@ -50,7 +50,9 @@ controlEval (WhileStructure b c) = do
   else return SkipStructure
 controlEval (OrderStructure c1 c2) = do
   one <- controlEval c1
-  return c2
+  if (isSkip c1)
+  then return c2
+  else return (OrderStructure one c2)
 controlEval SkipStructure = do
   return SkipStructure
 
@@ -70,10 +72,10 @@ parseAssignmentStructure = do
 
 parseOrderedStructure :: ReadP ControlStructure
 parseOrderedStructure = do
-  expr <- parseAssignmentStructure +++ parseIfStructure +++ parseWhileStructure +++ parseSkipStructure
+  expr <- parseAssignmentStructure +++ parseIfStructure +++ parseWhileStructure +++ parseSkipStructure +++ curly parseControl
   char ';'
   consumeWhiteSpaceMandatory
-  remainingExp <- parseControl
+  remainingExp <- parseControl +++ curly parseControl
   return (expr `OrderStructure` remainingExp)
 
 parseIfStructure :: ReadP ControlStructure
@@ -121,7 +123,7 @@ parseSkipStructure = do
   return (SkipStructure)
 
 orderedStructure :: ReadP ControlStructure
-orderedStructure = parseOrderedStructure
+orderedStructure = parseOrderedStructure +++ curly parseControl
 
 whileStructure :: ReadP ControlStructure
 whileStructure = orderedStructure +++ parseWhileStructure

@@ -1,9 +1,9 @@
-while:
-	ghc while.hs
+while-ss:
+	ghc while-ss.hs
 
 clean:
-	rm -f while.hi
-	rm -f while.o
+	rm -f while-ss.hi
+	rm -f while-ss.o
 	rm -f Arith.hi
 	rm -f Arith.o
 	rm -f Bool.hi
@@ -15,4 +15,4 @@ clean:
 
 realClean:
 	make clean
-	rm -f while
+	rm -f while-ss
